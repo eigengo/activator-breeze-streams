@@ -11,6 +11,18 @@ object TwentyNewsGroups {
 
   import nak.NakContext._
 
+  case class Message(from: String, subject: String, text: String)
+  object Message {
+
+    def apply(line: String): Message = {
+      val headerIndex = line.indexOf("\\n\\n")
+      val header = line.substring(0, headerIndex)
+
+      val text = line.substring(headerIndex + 1)
+      Message("", "", text)
+    }
+  }
+
   def main(args: Array[String]) {
     val classifier = loadClassifierFromResource[IndexedClassifier[String] with FeaturizedClassifier[String, String]]("/20news.classify")
 
@@ -19,9 +31,9 @@ object TwentyNewsGroups {
     val source = Source.fromURI(getClass.getResource("/20news-test.txt").toURI)(Codec.ISO8859)
     Flow(source.getLines()).
       // transform
-      map(line => line.toUpperCase).
+      map(Message.apply).
       // print to console (can also use ``foreach(println)``)
-      foreach(transformedLine => println(classifier.predict(transformedLine))).
+      foreach(message => println(classifier.predict(message.text))).
       onComplete(FlowMaterializer(MaterializerSettings())) {
         case Success(_) => system.shutdown()
         case Failure(e) =>
