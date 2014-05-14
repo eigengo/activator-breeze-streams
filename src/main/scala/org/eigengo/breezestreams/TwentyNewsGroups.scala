@@ -38,8 +38,6 @@ object TwentyNewsGroups {
     Flow(source.getLines()).
       mapConcat(line => List.fill(16)(Message.parse(line))).
       map(message => Classified(classifier.predict(message.text), message)).
-      foreach(_ => ()).
-      /*
       groupBy(_.label).
       foreach {
         case (label, producer) =>
@@ -48,13 +46,12 @@ object TwentyNewsGroups {
             foreach(x => println(s"Label $label has $x messages")).
             consume(materializer)
       }.
-      */
       onComplete(materializer) {
         case Success(_) => system.shutdown()
         case Failure(e) =>
           println("Failure: " + e.getMessage)
           system.shutdown()
-    }
+      }
   }
 
 }
