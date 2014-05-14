@@ -14,12 +14,16 @@ object TwentyNewsGroups {
   case class Message(from: String, subject: String, text: String)
   object Message {
 
-    def apply(line: String): Message = {
+    def parse(line: String): Message = {
       val headerIndex = line.indexOf("\\n\\n")
       val header = line.substring(0, headerIndex)
+      val headerElements = header.split("\\\\n").flatMap { e =>
+        val i = e.indexOf(':')
+        if (i != -1 && i + 2 < e.length) Some(e.substring(0, i) -> e.substring(i + 2)) else None
+      }.toMap
 
-      val text = line.substring(headerIndex + 1)
-      Message("", "", text)
+      val text = line.substring(headerIndex + 3)
+      Message(headerElements("From"), headerElements("Subject"), text)
     }
   }
 
@@ -31,7 +35,7 @@ object TwentyNewsGroups {
     val source = Source.fromURI(getClass.getResource("/20news-test.txt").toURI)(Codec.ISO8859)
     Flow(source.getLines()).
       // transform
-      map(Message.apply).
+      map(Message.parse).
       // print to console (can also use ``foreach(println)``)
       foreach(message => println(classifier.predict(message.text))).
       onComplete(FlowMaterializer(MaterializerSettings())) {
