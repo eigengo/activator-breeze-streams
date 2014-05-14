@@ -30,17 +30,26 @@ object TwentyNewsGroups {
 
   def main(args: Array[String]) {
     val classifier = loadClassifierFromResource[IndexedClassifier[String] with FeaturizedClassifier[String, String]]("/20news.classify")
-
     implicit val system = ActorSystem("Sys")
 
+    val materializer = FlowMaterializer(MaterializerSettings())
     val source = Source.fromURI(getClass.getResource("/20news-test.txt").toURI)(Codec.ISO8859)
+
     Flow(source.getLines()).
-      // transform
-      map(Message.parse).
-      // group by topic
+      mapConcat(line => List.fill(16)(Message.parse(line))).
       map(message => Classified(classifier.predict(message.text), message)).
-      foreach(cm => println(cm.label)).
-      onComplete(FlowMaterializer(MaterializerSettings())) {
+      foreach(_ => ()).
+      /*
+      groupBy(_.label).
+      foreach {
+        case (label, producer) =>
+          Flow(producer).
+            fold(0)((b, _) => b + 1).
+            foreach(x => println(s"Label $label has $x messages")).
+            consume(materializer)
+      }.
+      */
+      onComplete(materializer) {
         case Success(_) => system.shutdown()
         case Failure(e) =>
           println("Failure: " + e.getMessage)
