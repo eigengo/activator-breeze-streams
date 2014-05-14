@@ -11,6 +11,7 @@ object TwentyNewsGroups {
 
   import nak.NakContext._
 
+  case class Classified[L, V](label: L, value: V)
   case class Message(from: String, subject: String, text: String)
   object Message {
 
@@ -36,8 +37,9 @@ object TwentyNewsGroups {
     Flow(source.getLines()).
       // transform
       map(Message.parse).
-      // print to console (can also use ``foreach(println)``)
-      foreach(message => println(classifier.predict(message.text))).
+      // group by topic
+      map(message => Classified(classifier.predict(message.text), message)).
+      foreach(cm => println(cm.label)).
       onComplete(FlowMaterializer(MaterializerSettings())) {
         case Success(_) => system.shutdown()
         case Failure(e) =>
